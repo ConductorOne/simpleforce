@@ -39,7 +39,7 @@ type Client struct {
 	baseURL       string
 	instanceURL   string
 	useToolingAPI bool
-	httpClient    uhttp.BaseHttpClient
+	httpClient    *uhttp.BaseHttpClient
 }
 
 // QueryResult holds the response data from an SOQL query.
@@ -269,7 +269,7 @@ func NewClient(url, clientID, apiVersion string) *Client {
 		apiVersion: apiVersion,
 		baseURL:    url,
 		clientID:   clientID,
-		httpClient: uhttp.BaseHttpClient{},
+		httpClient: &uhttp.BaseHttpClient{},
 	}
 
 	// Remove trailing "/" from base url to prevent "//" when paths are appended
@@ -279,7 +279,7 @@ func NewClient(url, clientID, apiVersion string) *Client {
 	return client
 }
 
-func (client *Client) SetHttpClient(c uhttp.BaseHttpClient) {
+func (client *Client) SetHttpClient(c *uhttp.BaseHttpClient) {
 	client.httpClient = c
 }
 
