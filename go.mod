@@ -1,4 +1,4 @@
-module github.com/simpleforce/simpleforce
+module github.com/conductorone/simpleforce
 
 go 1.21
 
