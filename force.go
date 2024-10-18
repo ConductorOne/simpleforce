@@ -269,7 +269,7 @@ func NewClient(url, clientID, apiVersion string) *Client {
 		apiVersion: apiVersion,
 		baseURL:    url,
 		clientID:   clientID,
-		httpClient: &http.Client{},
+		httpClient: uhttp.BaseHttpClient{},
 	}
 
 	// Remove trailing "/" from base url to prevent "//" when paths are appended
