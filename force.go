@@ -279,7 +279,7 @@ func NewClient(url, clientID, apiVersion string) *Client {
 	return client
 }
 
-func (client *Client) SetHttpClient(c *http.Client) {
+func (client *Client) SetHttpClient(c uhttp.BaseHttpClient) {
 	client.httpClient = c
 }
 
