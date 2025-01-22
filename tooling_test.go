@@ -1,14 +1,17 @@
 package simpleforce
 
 import (
+	"context"
 	"testing"
 )
 
 func TestClient_Tooling_Query(t *testing.T) {
-	client := requireClient(t, true)
+	ctx := context.Background()
+
+	client := requireClient(ctx, t, true)
 
 	q := "SELECT Id, Name FROM Layout WHERE Name = 'Account Layout'"
-	result, err := client.Tooling().Query(q)
+	result, err := client.Tooling().Query(ctx, q)
 	if err != nil {
 		t.FailNow()
 	}
@@ -21,10 +24,12 @@ func TestClient_Tooling_Query(t *testing.T) {
 }
 
 func TestClient_ExecuteAnonymous(t *testing.T) {
-	client := requireClient(t, true)
+	ctx := context.Background()
+
+	client := requireClient(ctx, t, true)
 
 	apexBody := "System.debug('test');"
-	result, err := client.ExecuteAnonymous(apexBody)
+	result, err := client.ExecuteAnonymous(ctx, apexBody)
 	if err != nil {
 		t.FailNow()
 	}
