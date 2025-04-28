@@ -6,14 +6,15 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
-	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
-	"go.uber.org/zap"
 	"html"
 	"io"
 	"net/http"
 	"net/url"
 	"os"
 	"strings"
+
+	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap/ctxzap"
+	"go.uber.org/zap"
 
 	"github.com/conductorone/baton-sdk/pkg/uhttp"
 )
@@ -180,8 +181,20 @@ func (client *Client) LoginPassword(ctx context.Context, username, password, tok
 	req.Header.Add("charset", "UTF-8")
 	req.Header.Add("SOAPAction", "login")
 
+	l.Debug("Sending SOAP login request",
+		zap.String("request_url", requestUrl),
+		zap.String("username", username),
+		zap.Any("request_headers", req.Header))
+
 	resp, err := client.httpClient.Do(req)
 	if err != nil {
+		body, _ := io.ReadAll(resp.Body)
+		l.Debug("error submitting login request", zap.Error(err),
+			zap.String("url", requestUrl),
+			zap.String("client_id", client.clientID),
+			zap.String("response_body", string(body)),
+		)
+
 		l.Error("error occurred submitting request", zap.Error(err))
 		return err
 	}
