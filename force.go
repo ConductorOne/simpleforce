@@ -187,19 +187,14 @@ func (client *Client) LoginPassword(ctx context.Context, username, password, tok
 		zap.Any("request_headers", req.Header))
 
 	resp, err := client.httpClient.Do(req)
-	if err != nil {
-		body, _ := io.ReadAll(resp.Body)
-		l.Debug("error submitting login request", zap.Error(err),
-			zap.String("url", requestUrl),
-			zap.String("client_id", client.clientID),
-			zap.String("response_body", string(body)),
-		)
-
+	// Handle non-API errors
+	if err != nil && resp == nil {
 		l.Error("error occurred submitting request", zap.Error(err))
 		return err
 	}
 	defer resp.Body.Close()
 
+	// We have a response, but there's still possibly an error from the request, so we'll attempt to parse the error & body.
 	if resp.StatusCode != http.StatusOK {
 		l.Error("request failed", zap.Int("status_code", resp.StatusCode))
 
