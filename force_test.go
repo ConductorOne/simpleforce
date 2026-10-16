@@ -7,6 +7,8 @@ import (
 	"os"
 	"strings"
 	"testing"
+
+	"golang.org/x/oauth2/clientcredentials"
 )
 
 var (
@@ -15,6 +17,8 @@ var (
 	sfToken          = os.ExpandEnv("${SF_TOKEN}")
 	sfTrustIp        = os.ExpandEnv("${SF_TRUST_IP}")
 	sfCustomEndPoint = os.ExpandEnv("${SF_CUSTOM_ENDPOINT}")
+	sfClientID       = os.ExpandEnv("${SF_CLIENT_ID}")
+	sfClientSecret   = os.ExpandEnv("${SF_CLIENT_SECRET}")
 	sfURL            = func() string {
 		if os.ExpandEnv("${SF_URL}") != "" {
 			return os.ExpandEnv("${SF_URL}")
@@ -24,32 +28,54 @@ var (
 	}()
 )
 
+// checkCredentialsAndSkip skips tests that exercise the SOAP username and
+// password login when SF_USER or SF_PASS is not set.
 func checkCredentialsAndSkip(t *testing.T) {
 	if sfUser == "" || sfPass == "" {
-		log.Println(logPrefix, "SF_USER, SF_PASS environment variables are not set.")
-		t.Skip()
+		t.Skip(logPrefix + " SF_USER, SF_PASS environment variables are not set.")
 	}
 }
 
+// checkClientCredentialsAndSkip skips tests that need a live org when the
+// OAuth client credentials are not set. SF_URL must be the org's My Domain URL
+// (https://<domain>.my.salesforce.com): the client credentials flow does not
+// accept login.salesforce.com.
+func checkClientCredentialsAndSkip(t *testing.T) {
+	if sfClientID == "" || sfClientSecret == "" || os.Getenv("SF_URL") == "" {
+		t.Skip(logPrefix + " SF_CLIENT_ID, SF_CLIENT_SECRET, SF_URL environment variables are not set.")
+	}
+}
+
+// requireClient returns a client authenticated with the OAuth 2.0 client
+// credentials flow, the way baton-salesforce authenticates with a token source.
 func requireClient(ctx context.Context, t *testing.T, skippable bool) *Client {
 	if skippable {
-		checkCredentialsAndSkip(t)
+		checkClientCredentialsAndSkip(t)
 	}
 
-	client, err := NewClient(ctx, sfURL, DefaultClientID, DefaultAPIVersion)
-	if err != nil {
-		t.Error(err)
-		return nil
+	conf := clientcredentials.Config{
+		ClientID:     sfClientID,
+		ClientSecret: sfClientSecret,
+		TokenURL:     strings.TrimRight(sfURL, "/") + "/services/oauth2/token",
 	}
-
-	if client == nil {
-		t.Fatal()
-		return nil
-	}
-	err = client.LoginPassword(ctx, sfUser, sfPass, sfToken)
+	token, err := conf.Token(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	instanceURL := sfURL
+	if v, ok := token.Extra("instance_url").(string); ok && v != "" {
+		instanceURL = v
+	}
+
+	client, err := NewClient(ctx, instanceURL, DefaultClientID, DefaultAPIVersion)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if client == nil {
+		t.Fatal("nil client")
+	}
+	client.SetSidLoc(token.AccessToken, instanceURL)
 	return client
 }
 
@@ -85,8 +111,7 @@ func TestClient_LoginPasswordNoToken(t *testing.T) {
 	ctx := context.Background()
 
 	if sfTrustIp == "" {
-		log.Println(logPrefix, "SF_TRUST_IP environment variable is not set.")
-		t.Skip()
+		t.Skip(logPrefix + " SF_TRUST_IP environment variable is not set.")
 	}
 
 	checkCredentialsAndSkip(t)
@@ -109,8 +134,18 @@ func TestClient_LoginPasswordNoToken(t *testing.T) {
 	}
 }
 
-func TestClient_LoginOAuth(t *testing.T) {
+func TestClient_LoginClientCredentials(t *testing.T) {
+	ctx := context.Background()
 
+	client := requireClient(ctx, t, true)
+
+	result, err := client.Query(ctx, "SELECT Id FROM User LIMIT 1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Records) != 1 {
+		t.Fatalf("expected one user, got %d", len(result.Records))
+	}
 }
 
 func TestClient_Query(t *testing.T) {
