@@ -15,6 +15,8 @@ jobs:
       SF_PASS: ${{ secrets.SF_PASS }}
       SF_TOKEN: ${{ secrets.SF_TOKEN }}
       SF_URL: ${{ secrets.SF_URL }}
+      SF_CLIENT_ID: ${{ secrets.SF_CLIENT_ID }}
+      SF_CLIENT_SECRET: ${{ secrets.SF_CLIENT_SECRET }}
     steps:
       - name: Install Go
         if: success()
@@ -24,7 +26,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       - name: go tests
-        run: (set -o pipefail && SF_USER=${{ env.SF_USER }} SF_PASS=${{env.SF_PASS}} SF_TOKEN=${{env.SF_TOKEN}} SF_URL=${{env.SF_URL}} go test -v -covermode=count -json ./... | tee test.json)
+        run: (set -o pipefail && go test -v -covermode=count -json ./... | tee test.json)
       - name: annotate go tests
         if: always()
         uses: guyarb/golang-test-annotations@v0.5.1
